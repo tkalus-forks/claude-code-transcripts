@@ -698,3 +698,36 @@ class TestWebCommandRepoFiltering:
         # Should show (no repo) placeholder
         assert "(no repo)" in display
         assert "Fix the bug" in display
+
+
+class TestAllCmdClaudeConfigDir:
+    """Tests for all_cmd respecting CLAUDE_CONFIG_DIR."""
+
+    def test_all_cmd_uses_claude_config_dir_env(
+        self, tmp_path, output_dir, monkeypatch
+    ):
+        """Test that all command picks up CLAUDE_CONFIG_DIR env var as default source."""
+        from click.testing import CliRunner
+        from claude_code_transcripts import cli
+
+        # Create projects structure under a custom config dir
+        custom_config = tmp_path / "custom-config"
+        projects_dir = custom_config / "projects" / "-home-user-projects-myproject"
+        projects_dir.mkdir(parents=True)
+
+        session = projects_dir / "sess001.jsonl"
+        session.write_text(
+            '{"type": "user", "timestamp": "2025-01-01T10:00:00.000Z", "message": {"role": "user", "content": "Hello from env config"}}\n'
+            '{"type": "assistant", "timestamp": "2025-01-01T10:00:05.000Z", "message": {"role": "assistant", "content": [{"type": "text", "text": "Hi!"}]}}\n'
+        )
+
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(custom_config))
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["all", "--output", str(output_dir)],
+        )
+
+        assert result.exit_code == 0
+        assert (output_dir / "index.html").exists()

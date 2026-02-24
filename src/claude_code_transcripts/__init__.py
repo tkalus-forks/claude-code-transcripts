@@ -83,6 +83,14 @@ API_BASE_URL = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
 
 
+def get_claude_config_dir() -> Path:
+    """Return the Claude config directory, respecting CLAUDE_CONFIG_DIR env var."""
+    env = os.environ.get("CLAUDE_CONFIG_DIR")
+    if env:
+        return Path(env)
+    return Path.home() / ".claude"
+
+
 def get_session_summary(filepath, max_length=200):
     """Extract a human-readable summary from a session file.
 
@@ -1518,7 +1526,7 @@ def cli():
 )
 def local_cmd(output, output_auto, repo, gist, include_json, open_browser, limit):
     """Select and convert a local Claude Code session to HTML."""
-    projects_folder = Path.home() / ".claude" / "projects"
+    projects_folder = get_claude_config_dir() / "projects"
 
     if not projects_folder.exists():
         click.echo(f"Projects folder not found: {projects_folder}")
@@ -2101,7 +2109,7 @@ def web_cmd(
     "-s",
     "--source",
     type=click.Path(exists=True),
-    help="Source directory containing Claude projects (default: ~/.claude/projects).",
+    help="Source directory containing Claude projects (default: ~/.claude/projects or $CLAUDE_CONFIG_DIR/projects).",
 )
 @click.option(
     "-o",
@@ -2142,7 +2150,7 @@ def all_cmd(source, output, include_agents, dry_run, open_browser, quiet):
     """
     # Default source folder
     if source is None:
-        source = Path.home() / ".claude" / "projects"
+        source = get_claude_config_dir() / "projects"
     else:
         source = Path(source)
 

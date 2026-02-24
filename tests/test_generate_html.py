@@ -1638,3 +1638,56 @@ class TestSearchFeature:
 
         # Total pages should be embedded for JS to know how many pages to fetch
         assert "totalPages" in index_html or "total_pages" in index_html
+
+
+class TestGetClaudeConfigDir:
+    """Tests for get_claude_config_dir helper function."""
+
+    def test_returns_default_when_env_unset(self, monkeypatch):
+        """Test that default ~/.claude is returned when CLAUDE_CONFIG_DIR is not set."""
+        from claude_code_transcripts import get_claude_config_dir
+
+        monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+        assert get_claude_config_dir() == Path.home() / ".claude"
+
+    def test_returns_env_var_path_when_set(self, monkeypatch, tmp_path):
+        """Test that CLAUDE_CONFIG_DIR env var overrides the default."""
+        from claude_code_transcripts import get_claude_config_dir
+
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+        assert get_claude_config_dir() == tmp_path
+
+    def test_local_cmd_uses_claude_config_dir_env(self, tmp_path, monkeypatch):
+        """Test that local command uses CLAUDE_CONFIG_DIR env var instead of ~/.claude."""
+        from click.testing import CliRunner
+        from claude_code_transcripts import cli
+        import questionary
+
+        # Create mock projects structure under a custom dir (not ~/.claude)
+        custom_config = tmp_path / "custom-claude-config"
+        projects_dir = custom_config / "projects" / "test-project"
+        projects_dir.mkdir(parents=True)
+
+        session_file = projects_dir / "session-env.jsonl"
+        session_file.write_text(
+            '{"type":"summary","summary":"Env var session"}\n'
+            '{"type":"user","timestamp":"2025-01-01T00:00:00Z","message":{"role":"user","content":"Hello"}}\n'
+        )
+
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(custom_config))
+
+        class MockSelect:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def ask(self):
+                return session_file
+
+        monkeypatch.setattr(questionary, "select", MockSelect)
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["local"])
+
+        assert result.exit_code == 0
+        assert "Loading local sessions" in result.output
+        assert "Generated" in result.output

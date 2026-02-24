@@ -62,7 +62,13 @@ The generated output includes:
 
 ### Local sessions
 
-Local Claude Code sessions are stored as JSONL files in `~/.claude/projects`. Run with no arguments to select from recent sessions:
+Local Claude Code sessions are stored as JSONL files in `~/.claude/projects`. If you store your Claude config elsewhere, set `CLAUDE_CONFIG_DIR` to override the default location:
+
+```bash
+CLAUDE_CONFIG_DIR=/path/to/your/claude-config claude-code-transcripts
+```
+
+Run with no arguments to select from recent sessions:
 
 ```bash
 claude-code-transcripts
